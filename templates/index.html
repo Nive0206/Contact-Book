@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Contact Book</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+
+body {
+    font-family: 'Poppins', sans-serif;
+    margin: 0;
+    padding: 0;
+    background: linear-gradient(135deg, #dcb0ff 0%, #c9a0ff 100%);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.container {
+    backdrop-filter: blur(20px);
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 30px;
+    width: 90%;
+    max-width: 700px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+h1 {
+    text-align: center;
+    color: #726f6f;
+    margin-bottom: 20px;
+    text-shadow: 1px 1px 5px rgba(0,0,0,0.3);
+}
+
+input {
+    width: 100%;
+    padding: 12px;
+    margin: 8px 0;
+    border-radius: 10px;
+    border: none;
+    outline: none;
+    background: rgba(255,255,255,0.2);
+    color: #aba3a3;
+    font-size: 16px;
+    backdrop-filter: blur(5px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+input::placeholder { color: #7d7272; font-weight: 500; }
+
+button {
+    padding: 12px 20px;
+    margin: 5px 5px 5px 0;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: 0.3s;
+    background: rgba(255,255,255,0.2);
+    color: #580450;
+    backdrop-filter: blur(5px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+button:hover {
+    background: rgba(255,255,255,0.4);
+}
+
+#contactTable {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 10px;
+    overflow: hidden;
+    color: #8f03af;
+}
+
+#contactTable th, #contactTable td {
+    padding: 12px;
+    text-align: left;
+    color: #8804a2;
+}
+
+#contactTable th {
+    background: rgba(255,255,255,0.2);
+}
+
+#contactTable tr:hover {
+    background: rgba(255,255,255,0.3);
+    cursor: pointer;
+}
+
+.message {
+    text-align:center; 
+    margin-top:10px; 
+    font-weight:600;
+}
+
+.message.success { color: #d512e3; }
+.message.error { color: #f34e4e; }
+
+</style>
+</head>
+<body>
+<div class="container">
+<h1>Contact Book</h1>
+<input type="text" id="name" placeholder="Enter Name">
+<input type="text" id="phone" placeholder="Enter Phone Number">
+<div>
+<button onclick="addContact()">Add</button>
+<button onclick="updateContact()">Update</button>
+<button onclick="deleteContact()">Delete</button>
+<button onclick="clearFields()">Clear</button>
+</div>
+<div class="message" id="message"></div>
+<table id="contactTable">
+<thead><tr><th>Name</th><th>Phone</th></tr></thead>
+<tbody></tbody>
+</table>
+</div>
+
+<script>
+async function fetchContacts(){
+  const res = await fetch('/get');
+  const data = await res.json();
+  displayContacts(data);
+}
+
+function displayContacts(data){
+  const tbody = document.querySelector('#contactTable tbody');
+  tbody.innerHTML = '';
+  for(const name in data){
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${name}</td><td>${data[name]}</td>`;
+    tr.onclick = ()=>{ document.getElementById('name').value=name; document.getElementById('phone').value=data[name]; }
+    tbody.appendChild(tr);
+  }
+}
+
+function showMessage(msg, isError=false){
+  const m = document.getElementById('message');
+  m.innerText = msg;
+  m.className = 'message ' + (isError?'error':'success');
+  setTimeout(()=>{ m.innerText=''; },2000);
+}
+
+async function addContact(){
+  const name=document.getElementById('name').value.trim();
+  const phone=document.getElementById('phone').value.trim();
+  if(!name || !phone){ showMessage("Enter Name and Phone!", true); return; }
+  const res = await fetch('/add',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({name, phone})
+  });
+  const data = await res.json();
+  if(data.error) showMessage(data.error,true); else showMessage(data.message);
+  fetchContacts();
+  clearFields();
+}
+
+async function updateContact(){
+  const name=document.getElementById('name').value.trim();
+  const phone=document.getElementById('phone').value.trim();
+  if(!name || !phone){ showMessage("Enter Name and Phone!", true); return; }
+  const res = await fetch('/update',{
+    method:'PUT',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({name, phone})
+  });
+  const data = await res.json();
+  if(data.error) showMessage(data.error,true); else showMessage(data.message);
+  fetchContacts();
+  clearFields();
+}
+
+async function deleteContact(){
+  const name=document.getElementById('name').value.trim();
+  if(!name){ showMessage("Enter Name!", true); return; }
+  const res = await fetch('/delete',{
+    method:'DELETE',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({name})
+  });
+  const data = await res.json();
+  if(data.error) showMessage(data.error,true); else showMessage(data.message);
+  fetchContacts();
+  clearFields();
+}
+
+function clearFields(){ 
+  document.getElementById('name').value='';
+  document.getElementById('phone').value='';
+}
+
+window.onload = fetchContacts;
+</script>
+</body>
+</html>
